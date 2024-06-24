@@ -1,0 +1,28 @@
+{
+  "Serilog":
+  {
+    "Using": [],
+    "MinimumLevel": {
+      "Default": "Verbose",
+      "Override":
+      {
+        "Microsoft": "Warning",
+        "System": "Warning"
+      }
+    },
+    "WriteTo": [
+      {
+        "Name": "Console"
+      }
+    ],
+    "Enrich": [
+      "FromLogContext",
+      "WithMachineName",
+      "WithProcessId",
+      "WithThreadId"
+    ],
+    "Properties": {
+      "ApplicationName": "UserService"
+    }
+  }
+}
