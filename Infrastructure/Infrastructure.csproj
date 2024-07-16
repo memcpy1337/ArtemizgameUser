@@ -7,15 +7,21 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Artemizgame.Contracts" Version="2.1.1" />
+      <PackageReference Include="Artemizgame.Contracts" Version="2.2.2" />
+      <PackageReference Include="MassTransit.EntityFrameworkCore" Version="8.2.3" />
       <PackageReference Include="MassTransit.RabbitMQ" Version="8.2.3" />
+      <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.6" />
+      <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.6" />
+      <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="8.0.6" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.6" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.6" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.6">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
+      <PackageReference Include="StackExchange.Redis" Version="2.8.0" />
     </ItemGroup>
 
     <ItemGroup>

@@ -8,5 +8,5 @@ namespace Application.Common.Interfaces;
 [InjectAsScoped]
 public interface IPlayQueueRegisterService
 {
-    public Task AddUserToQueue(PlayQueueRegisterDto request, CancellationToken cancellationToken);
+    public Task<string> AddUserToQueue(PlayQueueRegisterDto request, CancellationToken cancellationToken);
 }

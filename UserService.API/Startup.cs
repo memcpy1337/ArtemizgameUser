@@ -6,7 +6,11 @@ using Application.Common.Interfaces;
 using Application.Common.Models;
 using FluentValidation.AspNetCore;
 using Infrastructure;
+using Infrastructure.SignalRHubs;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 using Netjection;
 
 namespace API;
@@ -37,6 +41,23 @@ public class Startup
         services.AddApplication(Configuration);
         services.AddControllers().AddFluentValidation();
 
+        services.AddAuthentication(x =>
+        {
+            x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+           .AddJwtBearer(x =>
+           {
+               x.RequireHttpsMetadata = false;
+               x.TokenValidationParameters = new TokenValidationParameters
+               {
+                   ValidateIssuerSigningKey = false,
+                   ValidateIssuer = false,
+                   ValidateAudience = false,
+                   ValidateLifetime = false,
+                   SignatureValidator = (token, _) => new JsonWebToken(token)
+               };
+           });
     }
         
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env,ILogger<Startup> logger)
@@ -54,6 +75,7 @@ public class Startup
                 context.Response.ContentType = "application/json";
 
                 var contextFeature = context.Features.Get<IExceptionHandlerPathFeature>();
+
                 if (contextFeature != null)
                 {
                     var result = JsonSerializer.Serialize(Response.Fail<object>(
@@ -65,7 +87,15 @@ public class Startup
         });
 
         app.UseRouting();
-            
+
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapHub<UserHub>("/UserHub").RequireAuthorization();
+        });
+
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
     }
 }

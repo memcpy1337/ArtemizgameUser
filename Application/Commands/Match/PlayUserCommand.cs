@@ -5,9 +5,9 @@ using Application.Common.DTOs.Match;
 using Application.Common.Interfaces;
 using Application.Common.Models;
 using Application.Common.Wrappers;
-using Domain.Entities;
 using Domain.Exceptions;
 using Forbids;
+using Mapster;
 
 namespace Application.Commands.Match;
 
@@ -35,9 +35,14 @@ internal sealed class PlayUserCommandHandler : IHandlerWrapper<PlayUserCommand, 
         var userData = await _userMatchData.GetUserDataAsync(request.RequestedUserId!, cancellationToken);
         _forbid.Null(userData, UserNotFoundException.Instance);
 
+        PlayQueueRegisterDto playQueueRegisterDto = new PlayQueueRegisterDto()
+        {
+            UserId = userData!.Id,
+            Elo = userData.Elo,
+            GameRegime = request.PlayUserRequest.GameRegime,
+            PlayerType = request.PlayUserRequest.PlayerType
+        };
 
-
-        _playQueueRegister.AddUserToQueue()
-        return Response.Success(new PlayResponse() { Ticket = "das"});
+        return Response.Success(new PlayResponse() { Ticket = await _playQueueRegister.AddUserToQueue(playQueueRegisterDto, cancellationToken) });
     }
 }

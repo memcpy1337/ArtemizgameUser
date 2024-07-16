@@ -1,22 +1,26 @@
 ﻿using Contracts.Events.MatchMakingEvents;
 using Contracts.Events.ServerEvents;
 using MassTransit;
+using Microsoft.Extensions.Logging;
 using System;
 
 namespace Infrastructure.Sagas;
 
 public sealed class PlayerQueueSaga : MassTransitStateMachine<PlayerQueueSagaData>
 {
+
     public State Queued { get; set; }
     public State MatchFound { get; set; }
     public State GameReady { get; set; }
 
-    public Event<MatchPlayerQueuedEvent> MatchPlayerQueued { get; set; }
+    public Event<QueuePlayerAddEvent> MatchPlayerQueued { get; set; }
     public Event<MatchPlayerAddEvent> MatchPlayerAdd { get; set; }
     public Event<ServerUpdateEvent> ServerUpdate { get; set; }
 
-    public PlayerQueueSaga()
+
+    public PlayerQueueSaga(ILogger<PlayerQueueSaga> logger)
     {
+
         InstanceState(x => x.CurrentState);
 
         Event(() => MatchPlayerQueued, e => e.CorrelateById(m => Guid.Parse(m.Message.UserId)));
@@ -30,12 +34,21 @@ public sealed class PlayerQueueSaga : MassTransitStateMachine<PlayerQueueSagaDat
 
         Initially(
             When(MatchPlayerQueued)
-            .Then(context => context.Saga.UserId = context.Message.UserId)
+            .Then((context) => {
+                logger.LogInformation($"Player {context.Message.UserId} queued");
+                context.Saga.UserId = context.Message.UserId;
+                context.Saga.Ticket = context.Message.TicketId;
+                context.Saga.AddedToQueue = true;
+            })
             .TransitionTo(Queued));
 
         During(Queued, When(MatchPlayerAdd)
             .Then(context =>
             {
+                logger.LogInformation($"Match for player {context.Message.UserId} found");
+
+                context.Saga.MatchFound = true;
+
                 context.Saga.MatchId = context.Message.MatchId;
                 context.Saga.AddedToQueue = true;
 

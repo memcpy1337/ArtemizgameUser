@@ -1,11 +1,16 @@
 ﻿using Infrastructure.Common.Models;
 using Infrastructure.Consumers;
 using Infrastructure.Persistence;
+using Infrastructure.Sagas;
 using MassTransit;
+using MassTransit.EntityFrameworkCoreIntegration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
+using StackExchange.Redis;
 using System;
+using System.Net;
 
 namespace Infrastructure;
 
@@ -19,13 +24,23 @@ public static class ServiceCollectionExtension
     /// </summary>
     /// <param name="services"><see cref="IServiceCollection"/> Interface</param>
     /// <param name="configuration"><see cref="IConfiguration"/> Interface</param>
-    public static void AddInfrastructure(this IServiceCollection services,IConfiguration configuration)
+    public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
 
         services.AddMassTransit(busConfig =>
         {
             busConfig.SetKebabCaseEndpointNameFormatter(); //user-created-event
             busConfig.AddConsumer<UserRegisterConsumer>();
+
+            busConfig.AddSagaStateMachine<PlayerQueueSaga, PlayerQueueSagaData>()
+            .EntityFrameworkRepository(r =>
+                {
+                    r.ConcurrencyMode = ConcurrencyMode.Pessimistic;
+                    r.ExistingDbContext<ApplicationDbContext>();
+                    r.LockStatementProvider = new PostgresLockStatementProvider();
+                    r.UsePostgres();
+                });
+
 #if DEBUG
             var settings = new MessageBrokerSettings();
             configuration.GetSection("MessageBroker").Bind(settings);
@@ -35,15 +50,63 @@ public static class ServiceCollectionExtension
 #endif
             busConfig.UsingRabbitMq((context, configuration) =>
             {
-
                 configuration.Host(new Uri(settings.Host!), h =>
                 {
                     h.Username(settings.Username!);
                     h.Password(settings.Password!);
                 });
 
+                configuration.UseInMemoryOutbox(context);
+
                 configuration.ConfigureEndpoints(context);
             });
+        });
+
+
+#if DEBUG
+        var redisSettings = new RedisSettings();
+        configuration.GetSection("RedisSettings").Bind(redisSettings);
+#else
+        var redisStringSettings = Environment.GetEnvironmentVariable("RedisSettings");
+        var redisSettings = JsonConvert.DeserializeObject<RedisSettings>(redisStringSettings);
+#endif
+        var config = new ConfigurationOptions
+        {
+            EndPoints = { redisSettings.Host },
+            User = redisSettings.User,
+            Password = redisSettings.Password,
+            AbortOnConnectFail = false
+        };
+
+        services.AddSingleton<IConnectionMultiplexer>(sp =>
+            ConnectionMultiplexer.Connect(config));
+
+        services.AddSignalR()
+        .AddStackExchangeRedis(o =>
+        {
+            o.ConnectionFactory = async writer =>
+            {
+                var config = new ConfigurationOptions
+                {
+                    EndPoints = { redisSettings.Host },
+                    User = redisSettings.User,
+                    Password = redisSettings.Password,
+                    AbortOnConnectFail = false
+                };
+                config.SetDefaultPorts();
+                var connection = await ConnectionMultiplexer.ConnectAsync(config, writer);
+                connection.ConnectionFailed += (_, e) =>
+                {
+                    Console.WriteLine("Connection to Redis failed.");
+                };
+
+                if (!connection.IsConnected)
+                {
+                    Console.WriteLine("Did not connect to Redis.");
+                }
+
+                return connection;
+            };
         });
 
 
@@ -55,7 +118,7 @@ public static class ServiceCollectionExtension
             {
                 string connString = string.Empty;
 #if DEBUG
-                connString = configuration.GetSection("ConnectionStrings:DefaultConnection").Value;     
+                connString = configuration.GetSection("ConnectionStrings:DefaultConnection").Value;
 #else
                 connString = Environment.GetEnvironmentVariable("CONNSTRING");
 #endif

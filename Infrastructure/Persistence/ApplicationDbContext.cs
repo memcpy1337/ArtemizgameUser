@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Application.Common.Interfaces;
 using Domain.Common;
 using Domain.Entities;
+using Infrastructure.Sagas;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,9 +21,13 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     }
 
     public DbSet<User> Users { get; set; }
+    public DbSet<PlayerQueueSagaData> PlayerQueueData { get; set; }
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+        builder.Entity<PlayerQueueSagaData>().HasKey(s => s.CorrelationId);
+
         base.OnModelCreating(builder);
     }
 
