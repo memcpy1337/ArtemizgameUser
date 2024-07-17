@@ -13,7 +13,7 @@ namespace Application;
 /// <summary>
 /// Extension Class For <see cref="IServiceCollection"/> Interface
 /// </summary>
-public static class ServiceCollectionExtension
+public static class ServiceCollectionExtension 
 {
     /// <summary>
     /// Injects Application Dependencies Into Dependency Injection Container
