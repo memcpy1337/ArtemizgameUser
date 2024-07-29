@@ -28,6 +28,10 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
         builder.Entity<PlayerQueueSagaData>().HasKey(s => s.CorrelationId);
 
+        builder.Entity<PlayerQueueSagaData>().HasIndex(s => s.MatchId);
+
+        builder.Entity<PlayerQueueSagaData>().HasIndex(s => s.UserId);
+
         base.OnModelCreating(builder);
     }
 

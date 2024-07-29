@@ -56,6 +56,11 @@ public static class ServiceCollectionExtension
                     h.Password(settings.Password!);
                 });
 
+                configuration.ReceiveEndpoint("user-register-queue-users", e =>
+                {
+                    e.ConfigureConsumer<UserRegisterConsumer>(context);
+                });
+
                 configuration.UseInMemoryOutbox(context);
 
                 configuration.ConfigureEndpoints(context);

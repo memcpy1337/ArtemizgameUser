@@ -12,6 +12,8 @@ public sealed class PlayerQueueSaga : MassTransitStateMachine<PlayerQueueSagaDat
     public State Queued { get; set; }
     public State MatchFound { get; set; }
     public State GameReady { get; set; }
+    public State Playing { get; set; }
+
 
     public Event<QueuePlayerAddEvent> MatchPlayerQueued { get; set; }
     public Event<MatchPlayerAddEvent> MatchPlayerAdd { get; set; }
@@ -69,6 +71,7 @@ public sealed class PlayerQueueSaga : MassTransitStateMachine<PlayerQueueSagaDat
                 {
                     context.Saga.ServerForMatchInit = true;
                 }));
+
 
         
     }
