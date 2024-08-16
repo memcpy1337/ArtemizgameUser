@@ -15,4 +15,6 @@ public class PlayerQueueSagaData : SagaStateMachineInstance
     public bool Connected { get; set; }
     public string? MatchId { get; set; }
     public string? Ticket { get; set; }
+    public string? Address { get; set; }
+    public int Port { get; set; }
 }

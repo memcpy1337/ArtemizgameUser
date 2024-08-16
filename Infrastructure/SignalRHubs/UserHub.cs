@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Application.Common.Interfaces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using StackExchange.Redis;
 using System;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Infrastructure.SignalRHubs;
 
-public class UserHub : Hub
+public class UserHub : Hub<IUserHubClient>
 {
     private readonly IConnectionMultiplexer _redis;
 
@@ -42,12 +43,12 @@ public class UserHub : Hub
 
     public async Task SendMessageToUser(string userId, string message)
     {
-        var db = _redis.GetDatabase();
-        var connectionId = await db.StringGetAsync($"SignalRConnection:{userId}");
+        //var db = _redis.GetDatabase();
+        //var connectionId = await db.StringGetAsync($"SignalRConnection:{userId}");
 
-        if (!string.IsNullOrEmpty(connectionId))
-        {
-            await Clients.Client(connectionId).SendAsync("ReceiveMessage", message);
-        }
+        //if (!string.IsNullOrEmpty(connectionId))
+        //{
+        //    await Clients.Client(connectionId).SendAsync("ReceiveMessage", message);
+        //}
     }
 }

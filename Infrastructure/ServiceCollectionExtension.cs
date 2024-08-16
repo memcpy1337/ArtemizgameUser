@@ -1,4 +1,7 @@
-﻿using Infrastructure.Common.Models;
+﻿using Application.Services;
+using Contracts.Events.MatchMakingEvents;
+using Contracts.Events.ServerEvents;
+using Infrastructure.Common.Models;
 using Infrastructure.Consumers;
 using Infrastructure.Persistence;
 using Infrastructure.Sagas;
@@ -26,6 +29,7 @@ public static class ServiceCollectionExtension
     /// <param name="configuration"><see cref="IConfiguration"/> Interface</param>
     public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddTransient<IUserNotifierService, UserNotifierService>();
 
         services.AddMassTransit(busConfig =>
         {
@@ -40,6 +44,7 @@ public static class ServiceCollectionExtension
                     r.LockStatementProvider = new PostgresLockStatementProvider();
                     r.UsePostgres();
                 });
+
 
 #if DEBUG
             var settings = new MessageBrokerSettings();
@@ -61,7 +66,29 @@ public static class ServiceCollectionExtension
                     e.ConfigureConsumer<UserRegisterConsumer>(context);
                 });
 
-                configuration.UseInMemoryOutbox(context);
+                configuration.ReceiveEndpoint("saga-queue", e =>
+                {
+                    const int ConcurrencyLimit = 20;
+
+                    e.PrefetchCount = ConcurrencyLimit;
+
+                    e.UseMessageRetry(r => r.Interval(5, 1000));
+                    e.UseInMemoryOutbox();
+
+                    e.ConfigureSaga<PlayerQueueSagaData>(context, s =>
+                    {
+                        var partition = s.CreatePartitioner(ConcurrencyLimit);
+
+                        s.Message<QueuePlayerAddEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
+                        s.Message<MatchPlayerAddEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
+                        s.Message<ServerConnectionDataUpdateEvent>(x => x.UsePartitioner(partition, m => m.Message.MatchId));
+                        s.Message<MatchStatusUpdateEvent>(x => x.UsePartitioner(partition, m => m.Message.MatchId));
+                        s.Message<ServerPlayerConnectedEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
+                        s.Message<QueuePlayerRemoveEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
+                        s.Message<MatchCancelEvent>(x => x.UsePartitioner(partition, m => m.Message.MatchId));
+                        s.Message<MatchPlayerRemoveEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
+                    });
+                });
 
                 configuration.ConfigureEndpoints(context);
             });
@@ -109,6 +136,11 @@ public static class ServiceCollectionExtension
                 {
                     Console.WriteLine("Did not connect to Redis.");
                 }
+                else
+                {
+                    Console.WriteLine("CONNECTED to Redis.");
+                }
+
 
                 return connection;
             };

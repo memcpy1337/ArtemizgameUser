@@ -7,7 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Artemizgame.Contracts" Version="2.2.2" />
       <PackageReference Include="MassTransit.EntityFrameworkCore" Version="8.2.3" />
       <PackageReference Include="MassTransit.RabbitMQ" Version="8.2.3" />
       <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.6" />
