@@ -22,7 +22,7 @@ public sealed class PlayerQueueSaga : MassTransitStateMachine<PlayerQueueSagaDat
     public Event<QueuePlayerAddEvent> MatchPlayerQueued { get; set; }
     public Event<MatchPlayerAddEvent> MatchPlayerAdd { get; set; }
     public Event<ServerConnectionDataUpdateEvent> ServerConnectionDataUpdate { get; set; }
-    public Event<MatchStatusUpdateEvent> MatchUpdate { get; set; }
+    public Event<MatchReadyEvent> MatchReady { get; set; }
     public Event<ServerPlayerConnectedEvent> PlayerConnected { get; set; }
     public Event<QueuePlayerRemoveEvent> PlayerRemovedFromQueue { get; set; }
     public Event<MatchPlayerRemoveEvent> MatchPlayerRemoveEvent { get; set; }
@@ -52,9 +52,9 @@ public sealed class PlayerQueueSaga : MassTransitStateMachine<PlayerQueueSagaDat
             e.SelectId(context => Guid.NewGuid());
         });
 
-        Event(() => MatchUpdate, e =>
+        Event(() => MatchReady, e =>
         {
-            e.CorrelateBy((saga, context) => saga.MatchId == context.Message.MatchId && context.Message.NewStatus == MatchStatusEnum.WaitPlayerConnect);
+            e.CorrelateBy((saga, context) => saga.MatchId == context.Message.MatchId);
             e.SelectId(context => Guid.NewGuid());
         });
 
@@ -100,7 +100,7 @@ public sealed class PlayerQueueSaga : MassTransitStateMachine<PlayerQueueSagaDat
             }).TransitionTo(ConnectionDataRecieved)
         );
 
-        During(ConnectionDataRecieved, When(MatchUpdate)
+        During(ConnectionDataRecieved, When(MatchReady)
             .ThenAsync(async (context) =>
             {
 

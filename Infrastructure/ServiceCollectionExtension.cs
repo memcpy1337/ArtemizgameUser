@@ -82,7 +82,7 @@ public static class ServiceCollectionExtension
                         s.Message<QueuePlayerAddEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
                         s.Message<MatchPlayerAddEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
                         s.Message<ServerConnectionDataUpdateEvent>(x => x.UsePartitioner(partition, m => m.Message.MatchId));
-                        s.Message<MatchStatusUpdateEvent>(x => x.UsePartitioner(partition, m => m.Message.MatchId));
+                        s.Message<MatchReadyEvent>(x => x.UsePartitioner(partition, m => m.Message.MatchId));
                         s.Message<ServerPlayerConnectedEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
                         s.Message<QueuePlayerRemoveEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
                         s.Message<MatchCancelEvent>(x => x.UsePartitioner(partition, m => m.Message.MatchId));
