@@ -36,6 +36,8 @@ public static class ServiceCollectionExtension
             busConfig.SetKebabCaseEndpointNameFormatter(); //user-created-event
             busConfig.AddConsumer<UserRegisterConsumer>();
 
+            busConfig.AddConsumer<UserInfoConsumer>().Endpoint(e => e.Name = "user-info");
+
             busConfig.AddSagaStateMachine<PlayerQueueSaga, PlayerQueueSagaData>()
             .EntityFrameworkRepository(r =>
                 {
@@ -53,6 +55,7 @@ public static class ServiceCollectionExtension
             var stringSettings = Environment.GetEnvironmentVariable("MessageBroker");
             var settings = JsonConvert.DeserializeObject<MessageBrokerSettings>(stringSettings);
 #endif
+
             busConfig.UsingRabbitMq((context, configuration) =>
             {
                 configuration.Host(new Uri(settings.Host!), h =>
@@ -72,7 +75,7 @@ public static class ServiceCollectionExtension
 
                     e.PrefetchCount = ConcurrencyLimit;
 
-                    e.UseMessageRetry(r => r.Interval(5, 1000));
+                    e.UseMessageRetry(r => r.Interval(8, 1500));
                     e.UseInMemoryOutbox();
 
                     e.ConfigureSaga<PlayerQueueSagaData>(context, s =>

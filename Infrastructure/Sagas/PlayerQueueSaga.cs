@@ -140,6 +140,7 @@ public sealed class PlayerQueueSaga : MassTransitStateMachine<PlayerQueueSagaDat
 
         DuringAny(When(MatchPlayerRemoveEvent).ThenAsync(async context =>
         {
+            await _notifierService.NotifyUserQueueRemove(context.Saga.UserId, QueuePlayerRemoveEnum.Other);
             logger.LogInformation($"Player ${context.Saga.UserId} removed from match. Exit saga");
         }).TransitionTo(Complete));
     }
