@@ -7,7 +7,7 @@ name: Docker
 
 on:
   schedule:
-    - cron: '35 18 * * *'
+    - cron: '34 14 * * *'
   push:
     branches: [ "master" ]
     # Publish semver tags as releases.
@@ -20,6 +20,7 @@ env:
   REGISTRY: ghcr.io
   # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
+  INFRA_REPO: memcpy1337/ArtemizgameInfra
 
 
 jobs:
@@ -75,13 +76,14 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
+          context: .
           file: UserService.API/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-            
+
       # Sign the resulting Docker image digest except on PRs.
       # This will only write to the public Rekor transparency log when the Docker
       # repository is public to avoid leaking data.  If you would like to publish
@@ -97,7 +99,69 @@ jobs:
         # against the sigstore community Fulcio instance.
         run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
 
+      - name: Checkout infra repo
+        if: github.event_name != 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.INFRA_REPO }}
+          token: ${{ secrets.INFRA_REPO_TOKEN }}
+          path: infra
 
-      - name: Call webhook
+      - name: Bump image digest in infra values
+        if: github.event_name != 'pull_request'
+        env:
+          VALUES_FILE: ${{ secrets.INFRA_VALUES_FILE }}
+          FILE: infra/${{ secrets.INFRA_VALUES_FILE }}
+          DIGEST: ${{ steps.build-and-push.outputs.digest }}
         run: |
-          curl -X POST -H "Content-Type: application/json" -d '{}' ${{ secrets.WEBHOOK_URL }}
+          set -euo pipefail
+
+          echo "Updating values file: $FILE"
+
+          if [ -z "${VALUES_FILE}" ]; then
+            echo "Secret INFRA_VALUES_FILE is empty. Example: infra/envs/test/values/yarp.yaml"
+            exit 1
+          fi
+
+          if [ ! -f "$FILE" ]; then
+            echo "Values file not found: $FILE"
+            echo "Listing candidates:"
+            find infra/infra -type f -iname "*yarp*.y*ml" -maxdepth 8 || true
+            exit 1
+          fi
+
+          python - << 'PY'
+          import os, re
+
+          file = os.environ["FILE"]
+          digest = os.environ["DIGEST"]
+
+          with open(file, "r", encoding="utf-8") as f:
+              s = f.read()
+
+          if re.search(r'^\s*digest:\s*', s, flags=re.M) is None:
+              raise SystemExit("digest: key not found in values file (expected image.digest)")
+
+          s2 = re.sub(r'(^\s*digest:\s*")[^"]*(")', r'\1'+digest+r'\2', s, flags=re.M)
+          if s2 == s:
+              s2 = re.sub(r'(^\s*digest:\s*)\S+', r'\1'+digest, s, flags=re.M)
+
+          with open(file, "w", encoding="utf-8") as f:
+              f.write(s2)
+
+          print("Updated digest in", file, "to", digest)
+          PY
+        shell: bash
+
+
+      - name: Commit & push infra change
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          cd infra
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add "${{ secrets.INFRA_VALUES_FILE }}"
+          git commit -m "deploy: bump digest to ${{ steps.build-and-push.outputs.digest }}" || exit 0
+          git push
