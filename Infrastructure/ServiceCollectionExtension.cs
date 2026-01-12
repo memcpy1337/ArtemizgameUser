@@ -49,8 +49,8 @@ public static class ServiceCollectionExtension
 
 
 #if DEBUG
-            var settings = new MessageBrokerSettings();
-            configuration.GetSection("MessageBroker").Bind(settings);
+            var stringSettings = Environment.GetEnvironmentVariable("MessageBroker");
+            var settings = JsonConvert.DeserializeObject<MessageBrokerSettings>(stringSettings);
 #else
             var stringSettings = Environment.GetEnvironmentVariable("MessageBroker");
             var settings = JsonConvert.DeserializeObject<MessageBrokerSettings>(stringSettings);
@@ -84,11 +84,11 @@ public static class ServiceCollectionExtension
 
                         s.Message<QueuePlayerAddEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
                         s.Message<MatchPlayerAddEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
-                        s.Message<ServerConnectionDataUpdateEvent>(x => x.UsePartitioner(partition, m => m.Message.MatchId));
-                        s.Message<MatchReadyEvent>(x => x.UsePartitioner(partition, m => m.Message.MatchId));
+                        s.Message<MatchReadyEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
                         s.Message<ServerPlayerConnectedEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
                         s.Message<QueuePlayerRemoveEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
-                        s.Message<MatchCancelEvent>(x => x.UsePartitioner(partition, m => m.Message.MatchId));
+                        s.Message<MatchCancelEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
+                        s.Message<MatchDataUpdate>(x => x.UsePartitioner(partition, m => m.Message.UserId));
                         s.Message<MatchPlayerRemoveEvent>(x => x.UsePartitioner(partition, m => m.Message.UserId));
                     });
                 });
@@ -99,8 +99,8 @@ public static class ServiceCollectionExtension
 
 
 #if DEBUG
-        var redisSettings = new RedisSettings();
-        configuration.GetSection("RedisSettings").Bind(redisSettings);
+        var redisStringSettings = Environment.GetEnvironmentVariable("RedisSettings");
+        var redisSettings = JsonConvert.DeserializeObject<RedisSettings>(redisStringSettings);
 #else
         var redisStringSettings = Environment.GetEnvironmentVariable("RedisSettings");
         var redisSettings = JsonConvert.DeserializeObject<RedisSettings>(redisStringSettings);
@@ -119,6 +119,7 @@ public static class ServiceCollectionExtension
         services.AddSignalR()
         .AddStackExchangeRedis(o =>
         {
+            o.Configuration.ChannelPrefix = "UserM";
             o.ConnectionFactory = async writer =>
             {
                 var config = new ConfigurationOptions
@@ -158,7 +159,7 @@ public static class ServiceCollectionExtension
             {
                 string connString = string.Empty;
 #if DEBUG
-                connString = configuration.GetSection("ConnectionStrings:DefaultConnection").Value;
+                connString = Environment.GetEnvironmentVariable("CONNSTRING");
 #else
                 connString = Environment.GetEnvironmentVariable("CONNSTRING");
 #endif

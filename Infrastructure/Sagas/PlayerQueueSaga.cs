@@ -21,8 +21,8 @@ public sealed class PlayerQueueSaga : MassTransitStateMachine<PlayerQueueSagaDat
 
     public Event<QueuePlayerAddEvent> MatchPlayerQueued { get; set; }
     public Event<MatchPlayerAddEvent> MatchPlayerAdd { get; set; }
-    public Event<ServerConnectionDataUpdateEvent> ServerConnectionDataUpdate { get; set; }
     public Event<MatchReadyEvent> MatchReady { get; set; }
+    public Event<MatchDataUpdate> MatchDataUpdate { get; set; }
     public Event<ServerPlayerConnectedEvent> PlayerConnected { get; set; }
     public Event<QueuePlayerRemoveEvent> PlayerRemovedFromQueue { get; set; }
     public Event<MatchPlayerRemoveEvent> MatchPlayerRemoveEvent { get; set; }
@@ -36,27 +36,13 @@ public sealed class PlayerQueueSaga : MassTransitStateMachine<PlayerQueueSagaDat
 
         Event(() => MatchPlayerQueued, e => e.CorrelateById(m => Guid.Parse(m.Message.UserId)));
         Event(() => MatchPlayerAdd, e => e.CorrelateById(m => Guid.Parse(m.Message.UserId)));
+        Event(() => MatchCancel, e => e.CorrelateById(m => Guid.Parse(m.Message.UserId)));
+        Event(() => MatchReady, e => e.CorrelateById(m => Guid.Parse(m.Message.UserId)));
+        Event(() => MatchDataUpdate, e => e.CorrelateById(m => Guid.Parse(m.Message.UserId)));
+        Event(() => MatchPlayerRemoveEvent, e => e.CorrelateById(m => Guid.Parse(m.Message.UserId)));
         Event(() => PlayerConnected, e => e.CorrelateById(m => Guid.Parse(m.Message.UserId)));
         Event(() => PlayerRemovedFromQueue, e => e.CorrelateById(m => Guid.Parse(m.Message.UserId)));
         Event(() => MatchPlayerRemoveEvent, e => e.CorrelateById(m => Guid.Parse(m.Message.UserId)));
-
-        Event(() => MatchCancel, e =>
-        {
-            e.CorrelateBy((saga, context) => saga.MatchId == context.Message.MatchId);
-            e.SelectId(context => Guid.NewGuid());
-        });
-
-        Event(() => ServerConnectionDataUpdate, e =>
-        {
-            e.CorrelateBy((saga, context) => saga.MatchId == context.Message.MatchId);
-            e.SelectId(context => Guid.NewGuid());
-        });
-
-        Event(() => MatchReady, e =>
-        {
-            e.CorrelateBy((saga, context) => saga.MatchId == context.Message.MatchId);
-            e.SelectId(context => Guid.NewGuid());
-        });
 
         Initially(
             When(MatchPlayerQueued)
@@ -84,7 +70,7 @@ public sealed class PlayerQueueSaga : MassTransitStateMachine<PlayerQueueSagaDat
 
             }).TransitionTo(MatchFound));
 
-        During(MatchFound, When(ServerConnectionDataUpdate)
+        During(MatchFound, When(MatchDataUpdate)
             .ThenAsync(async (context) =>
             {
                 logger.LogInformation($"Server ready for match {context.Message.MatchId}");
