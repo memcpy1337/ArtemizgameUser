@@ -41,6 +41,7 @@ public static class ServiceCollectionExtension
             busConfig.AddSagaStateMachine<PlayerQueueSaga, PlayerQueueSagaData>()
             .EntityFrameworkRepository(r =>
                 {
+                    r.IsolationLevel = System.Data.IsolationLevel.ReadCommitted;
                     r.ConcurrencyMode = ConcurrencyMode.Pessimistic;
                     r.ExistingDbContext<ApplicationDbContext>();
                     r.LockStatementProvider = new PostgresLockStatementProvider();
@@ -76,7 +77,7 @@ public static class ServiceCollectionExtension
                     e.PrefetchCount = ConcurrencyLimit;
 
                     e.UseMessageRetry(r => r.Interval(8, 1500));
-                    e.UseInMemoryOutbox();
+                    e.UseInMemoryOutbox(context);
 
                     e.ConfigureSaga<PlayerQueueSagaData>(context, s =>
                     {
