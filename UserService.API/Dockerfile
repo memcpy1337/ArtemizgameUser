@@ -1,5 +1,10 @@
-# Base image
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+USER root
+RUN apt-get update && apt-get install -y \
+    libgssapi-krb5-2 \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
 USER app
 WORKDIR /app
 EXPOSE 6033
