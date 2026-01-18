@@ -14,10 +14,11 @@ namespace Infrastructure.SignalRHubs;
 public class UserHub : Hub<IUserHubClient>
 {
     private readonly IConnectionMultiplexer _redis;
-
-    public UserHub(IConnectionMultiplexer redis)
+    private readonly IUserPublisher _userPublisher;
+    public UserHub(IConnectionMultiplexer redis, IUserPublisher userPublisher)
     {
         _redis = redis;
+        _userPublisher = userPublisher;
     }
 
     public override async Task OnConnectedAsync()
@@ -37,6 +38,8 @@ public class UserHub : Hub<IUserHubClient>
 
         var db = _redis.GetDatabase();
         await db.KeyDeleteAsync($"SignalRConnection:{userId}");
+
+        await _userPublisher.PlayerDisconnected(userId);
 
         await base.OnDisconnectedAsync(exception);
     }

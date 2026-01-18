@@ -1,9 +1,11 @@
-﻿using Application.Services;
+﻿using Application.Common.Interfaces;
+using Application.Services;
 using Contracts.Events.MatchMakingEvents;
 using Contracts.Events.ServerEvents;
 using Infrastructure.Common.Models;
 using Infrastructure.Consumers;
 using Infrastructure.Persistence;
+using Infrastructure.Publishers;
 using Infrastructure.Sagas;
 using MassTransit;
 using MassTransit.EntityFrameworkCoreIntegration;
@@ -30,7 +32,7 @@ public static class ServiceCollectionExtension
     public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddTransient<IUserNotifierService, UserNotifierService>();
-
+        services.AddTransient<IUserPublisher, UserPublisher>();
         services.AddMassTransit(busConfig =>
         {
             busConfig.SetKebabCaseEndpointNameFormatter(); //user-created-event
